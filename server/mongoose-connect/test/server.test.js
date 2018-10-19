@@ -3,11 +3,23 @@ const request = require('supertest')
 
 var { Model } = require('./../model')
 var { app } = require('./../../server')
+var todos = [
+  {
+    text: ' what the fuck u want'
+  },
+  {
+    text: 'ni main ne ni jana yar'
+  }
+]
 
 beforeEach(done => {
-  Model.remove({}).then(() => {
-    done()
-  })
+  Model.remove({})
+    .then(() => {
+      Model.insertMany(todos)
+    })
+    .then(() => {
+      done()
+    })
 })
 
 describe('Todo-Post', () => {
@@ -26,7 +38,7 @@ describe('Todo-Post', () => {
           return done(err)
         }
 
-        Model.find()
+        Model.find({ text })
           .then(todos => {
             expect(todos.length).toBe(1)
             expect(todos[0].text).toBe(text)
@@ -45,12 +57,24 @@ describe('Todo-Post', () => {
       }
       Model.find()
         .then(todos => {
-          expect(todos.length).toBe(0)
+          expect(todos.length).toBe(2)
           done()
         })
         .catch(err => {
           return done(err)
         })
     })
+  })
+})
+
+describe('Todos of Get methods', () => {
+  it('Get all objects', done => {
+    request(app)
+      .get('/todos')
+      .expect(200)
+      .expect(res => {
+        expect(res.body.todos.length).toBe(2)
+      })
+      .end(done)
   })
 })

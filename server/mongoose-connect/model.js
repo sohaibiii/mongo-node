@@ -5,6 +5,15 @@ var Model = mongoose.model('Model', {
     required: true,
     trim: true,
     minlength: 10
+  },
+  created:{
+    type:Boolean,
+    default:false
+
+  },
+  createdAt:{
+    type:Number,
+    default:null
   }
 })
 
