@@ -126,3 +126,42 @@ describe('delete todos', () => {
       })
   })
 })
+
+describe('updateing todos', () => {
+  it('updating throug id', done => {
+    var id = todos[0]._id.toHexString()
+    var text = 'ap mjhe btao k kia ho raha hai'
+
+    request(app)
+      .patch(`/todos/${id}`)
+      .send({
+        created: true,
+        text
+      })
+      .expect(200)
+      .expect(res => {
+        expect(res.body.todo.text).toBe(text)
+        expect(res.body.todo.created).toBe(true)
+        expect(typeof res.body.todo.createdAt).toBe('number')
+      })
+      .end(done)
+  })
+
+  it(' false createdAt will be null', done => {
+    const id2 = todos[1]._id.toHexString()
+    var text = 'yr ni esa ni hta'
+
+    request(app)
+      .patch(`/todos/${id2}`)
+      .send({
+        text
+      })
+      .expect(200)
+      .expect(res => {
+        expect(res.body.todo.text).toBe(text)
+        expect(res.body.todo.created).toBe(false)
+        expect(res.body.todo.createdAt).toBeFalsy()
+      })
+      .end(done)
+  })
+})
