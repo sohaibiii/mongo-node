@@ -1,13 +1,16 @@
 const expect = require('expect')
 const request = require('supertest')
+var { ObjectID } = require('mongodb')
 
 var { Model } = require('./../model')
 var { app } = require('./../../server')
 var todos = [
   {
+    _id: new ObjectID(),
     text: ' what the fuck u want'
   },
   {
+    _id: new ObjectID(),
     text: 'ni main ne ni jana yar'
   }
 ]
@@ -76,5 +79,50 @@ describe('Todos of Get methods', () => {
         expect(res.body.todos.length).toBe(2)
       })
       .end(done)
+  })
+  describe('Todos of get method by ids', () => {
+    it('TODO by id', done => {
+      const ids = todos[1]._id.toHexString()
+      request(app)
+        .get(`/todos/${ids}`)
+        .expect(200)
+        .expect(res => {
+          expect(res.body.todo._id).toBe(ids)
+          expect(res.body.todo.text).toBe(todos[1].text)
+        })
+        .end(done)
+    })
+    it('if id-todo not found', done => {
+      const d = new ObjectID().toHexString()
+      request(app).get(`/todos/${d}`).expect(400).end(done)
+    })
+    it('invaid id', done => {
+      request(app).get('/todos/qwewe3243').expect(400).end(done)
+    })
+  })
+})
+
+describe('delete todos', () => {
+  it('delete by ids', done => {
+    var id = todos[1]._id.toHexString()
+    request(app)
+      .delete(`/todos/${id}`)
+      .expect(200)
+      .expect(res => {
+        expect(res.body.todo._id).toBe(id)
+      })
+      .end((err, res) => {
+        if (err) {
+          return done(err)
+        }
+        Model.findById(id)
+          .then(model => {
+            expect(model).toBeFalsy() // it is used instead of toNotExists()
+            done()
+          })
+          .catch(err => {
+            return done(err)
+          })
+      })
   })
 })

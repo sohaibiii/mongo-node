@@ -5,6 +5,7 @@ const { Model } = require('./mongoose-connect/model')
 const { ObjectID } = require('mongodb')
 
 const { Student } = require('./mongoose-connect/user')
+const port = process.env.PORT || 3000
 
 const app = express()
 app.use(bodyparser.json())
@@ -50,8 +51,25 @@ app.get('/todos/:id', (req, res) => {
   }
 })
 
-app.listen(3000, () => {
-  console.log('the server is started')
+app.delete('/todos/:id', (req, res) => {
+  const idd = req.params.id
+  if (!ObjectID.isValid(idd)) {
+    res.status(400).send()
+  } else {
+    Model.findByIdAndDelete(idd)
+      .then(todo => {
+        if (!todo) {
+          res.status(400).send()
+        } else res.send({ todo })
+      })
+      .catch(err => {
+        res.status(400).send(err)
+      })
+  }
+})
+
+app.listen(port, () => {
+  console.log(`the server is started at ${port}`)
 })
 
 module.exports = {
