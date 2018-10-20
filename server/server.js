@@ -3,6 +3,7 @@ const bodyparser = require('body-parser')
 var { mongoose } = require('./mongoose-connect/connection')
 const { Model } = require('./mongoose-connect/model')
 const { ObjectID } = require('mongodb')
+const _ = require('lodash')
 
 const { Student } = require('./mongoose-connect/user')
 const port = process.env.PORT || 3000
@@ -57,6 +58,36 @@ app.delete('/todos/:id', (req, res) => {
     res.status(400).send()
   } else {
     Model.findByIdAndDelete(idd)
+      .then(todo => {
+        if (!todo) {
+          res.status(400).send()
+        } else res.send({ todo })
+      })
+      .catch(err => {
+        res.status(400).send(err)
+      })
+  }
+})
+
+app.patch('/todos/:id', (req, res) => {
+  const id = req.params.id
+  var body = _.pick(req.body, ['text', 'created'])
+  if (_.isBoolean(body.created) && body.created) {
+    body.createdAt = new Date().getTime()
+  } else {
+    body.created = false
+    body.createdAt = null
+  }
+  if (!ObjectID.isValid(id)) {
+    res.status(400).send()
+  } else {
+    Model.findByIdAndUpdate(
+      id,
+      {
+        $set: body
+      },
+      { new: true }
+    )
       .then(todo => {
         if (!todo) {
           res.status(400).send()
