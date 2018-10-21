@@ -1,3 +1,16 @@
+var env = process.env.NODE_ENV || 'development'
+
+// by default process.env.NODE_ENV  'production' hta hai
+console.log('***** env is', env)
+
+if (env === 'development') {
+  process.env.PORT = 3000
+  process.env.MONGODB_URI = 'mongodb://localhost:27017/Todo-Mongo'
+} else if (env === 'test') {
+  process.env.PORT = 3000
+  process.env.MONGODB_URI = 'mongodb://localhost:27017/Todo-Mongo-test'
+}
+
 const express = require('express')
 const bodyparser = require('body-parser')
 var { mongoose } = require('./mongoose-connect/connection')
@@ -6,7 +19,7 @@ const { ObjectID } = require('mongodb')
 const _ = require('lodash')
 
 const { Student } = require('./mongoose-connect/user')
-const port = process.env.PORT || 3000
+const port = process.env.PORT
 
 const app = express()
 app.use(bodyparser.json())
