@@ -17,8 +17,9 @@ var { mongoose } = require('./mongoose-connect/connection')
 const { Model } = require('./mongoose-connect/model')
 const { ObjectID } = require('mongodb')
 const _ = require('lodash')
+const { Authenticatemiddleware } = require('./middleware/authenticate')
 
-const { Student } = require('./mongoose-connect/user')
+const { User } = require('./mongoose-connect/user')
 const port = process.env.PORT
 
 const app = express()
@@ -110,6 +111,31 @@ app.patch('/todos/:id', (req, res) => {
         res.status(400).send(err)
       })
   }
+})
+
+app.post('/users', (req, res) => {
+  const body = _.pick(req.body, ['email', 'password'])
+  var user = new User(body)
+  user
+    .save()
+    .then(() => {
+      return user.generateAuthToken()
+    })
+    .then(token => {
+      // var user1 = _.pick(user, ['_id', 'email'])
+
+      res.header('x-token', token).send(user)
+      console.log(user)
+    })
+    .catch(err => {
+      res.status(400).send(err)
+    })
+})
+
+// middleware always run befor the app.get  bcz it is in middle
+
+app.get('/users/me', Authenticatemiddleware, (req, res) => {
+  res.send(req.user)
 })
 
 app.listen(port, () => {

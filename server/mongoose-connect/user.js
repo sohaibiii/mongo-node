@@ -1,16 +1,83 @@
 const mongoose = require('mongoose')
-var Student = mongoose.model('Student', {
-  name: {
-    type: String
+const validator = require('validator')
+const jwt = require('jsonwebtoken')
+const _ = require('lodash')
+const userShema = new mongoose.Schema({
+  email: {
+    type: String,
+    minlength: 1,
+    required: true,
+    trim: true,
+    unique: true,
+    validate: {
+      validator: validator.isEmail,
+      message: 'email is not valid'
+    }
   },
-  isgraduate: {
-    type: Boolean
+  password: {
+    type: String,
+    required: true,
+    minlength: 6
   },
-  age: {
-    type: Number
-  }
+  tokens: [
+    {
+      access: {
+        type: String,
+        required: true
+      },
+      token: {
+        type: String,
+        required: true
+      }
+    }
+  ]
 })
+userShema.methods.toJSON = function () {
+  // builtd in instance method
+  var user = this
+  var obj = user.toObject() // convert the instance into object
+
+  return _.pick(obj, ['_id', 'email'])
+}
+
+userShema.methods.generateAuthToken = function () {
+  // builtd in instance method
+  // this shows the instance means single user
+  var access = 'auth'
+  var token = jwt.sign({ _id: this._id, access }, 'sohaibi')
+  this.tokens.push({ access, token })
+  return this.save().then(() => {
+    return token
+  })
+}
+
+userShema.statics.findByToken = function (token) {
+  var User = this
+  var decode
+  try {
+    decode = jwt.verify(token, 'sohaibi')
+  } catch (error) {
+    // return new Promise((reject, resolve) => {
+    //   reject()
+    // })
+    return Promise.reject()
+  }
+  return User.findOne({
+    _id: decode._id,
+    'tokens.token': token,
+    'tokens.access': 'auth'
+  })
+}
+
+// findByToken is a model function
+// statics is just like methods object but used for model
+
+var User = mongoose.model('User', userShema)
+
+// userShema is used for adding methods to your model
+// userShema.methods is an object where u can add methods
+// generateAuthToken is a instance mehtod it apply on all instances every time it creates
 
 module.exports = {
-  Student
+  User
 }
