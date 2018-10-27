@@ -2,6 +2,7 @@ const mongoose = require('mongoose')
 const validator = require('validator')
 const jwt = require('jsonwebtoken')
 const _ = require('lodash')
+const bcrypt = require('bcryptjs')
 const userShema = new mongoose.Schema({
   email: {
     type: String,
@@ -68,6 +69,19 @@ userShema.statics.findByToken = function (token) {
     'tokens.access': 'auth'
   })
 }
+
+userShema.pre('save', function (next) {
+  // middleware that runs before saveing and its is for intance
+  var user = this
+  if (user.isModified('password')) {
+    bcrypt.genSalt(10, (err, salt) => {
+      bcrypt.hash(user.password, salt, (err, hash) => {
+        user.password = hash
+        next()
+      })
+    })
+  } else next()
+})
 
 // findByToken is a model function
 // statics is just like methods object but used for model
