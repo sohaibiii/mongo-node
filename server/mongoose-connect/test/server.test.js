@@ -3,30 +3,16 @@ const request = require('supertest')
 var { ObjectID } = require('mongodb')
 
 var { Model } = require('./../model')
+var { User } = require('./../user')
 var { app } = require('./../../server')
-var todos = [
-  {
-    _id: new ObjectID(),
-    text: ' what the fuck u want'
-  },
-  {
-    _id: new ObjectID(),
-    text: 'ni main ne ni jana yar'
-  }
-]
+var { todos, populateTodos, userdata, populateUsers } = require('./seed/seed')
 
-beforeEach(done => {
-  Model.remove({})
-    .then(() => {
-      Model.insertMany(todos)
-    })
-    .then(() => {
-      done()
-    })
-})
+beforeEach(populateUsers)
+beforeEach(populateTodos)
 
-describe('Todo-Post', () => {
-  it('post-verification', done => {
+describe('Todo-Post', function () {
+  it('post-verification', function (done) {
+    // this.timeout(10000)
     var text = 'this is my testing data'
 
     request(app)
@@ -163,5 +149,145 @@ describe('updateing todos', () => {
         expect(res.body.todo.createdAt).toBeFalsy()
       })
       .end(done)
+  })
+})
+
+describe('user get request', () => {
+  it('get user by token', done => {
+    request(app)
+      .get('/users/me')
+      .set('x-token', userdata[0].tokens[0].token)
+      .expect(200)
+      .expect(res => {
+        expect(res.body._id).toBe(userdata[0]._id.toHexString())
+        expect(res.body.email).toBe(userdata[0].email)
+      })
+      .end(done)
+  })
+  it('get 401 if token not given', done => {
+    request(app)
+      .get('/users/me')
+      .expect(401)
+      .expect(res => {
+        expect(res.body).toEqual({})
+      })
+      .end(done)
+  })
+})
+
+describe('user post ', () => {
+  it('user post to enter data ensure', done => {
+    var email = 'sohaiba3343@gmail.com'
+    var password = 'mynameiskhanand'
+    request(app)
+      .post('/users')
+      .send({ email, password })
+      .expect(200)
+      .expect(res => {
+        expect(res.headers['x-token']).toBeTruthy()
+        expect(res.body._id).toBeTruthy()
+        expect(res.body.email).toBe(email)
+      })
+      .end(err => {
+        if (err) {
+          return done(err)
+        } else {
+          User.findOne({ email })
+            .then(user => {
+              expect(user).toBeTruthy()
+              expect(user.password).not.toBe(password)
+              done()
+            })
+            .catch(e => {
+              return done(e)
+            })
+        }
+      })
+  })
+
+  it('check if email and pass is unvalid', done => {
+    request(app)
+      .get('/users')
+      .send({
+        email: 'alihgj34',
+        password: 'hghhg'
+      })
+      .expect(404)
+      .end(done)
+  })
+
+  it('check if email is already exists then err', done => {
+    request(app)
+      .get('/users')
+      .send({
+        email: userdata[0].email,
+        password: 'hghhg5465gfdfgd'
+      })
+      .expect(404)
+      .end(done)
+  })
+})
+describe('login testing', () => {
+  it('login', done => {
+    request(app)
+      .post('/users/login')
+      .send({
+        email: userdata[1].email,
+        password: userdata[1].password
+      })
+      .expect(200)
+      .expect(res => {
+        expect(res.headers['x-token']).toBeTruthy()
+      })
+      .end((err, res) => {
+        if (err) {
+          return done(err)
+        } else {
+          User.findById(userdata[1]._id)
+            .then(user => {
+              expect(user.toObject().tokens[0]).toMatchObject({
+                access: 'auth',
+                token: res.headers['x-token']
+              })
+              expect(user.email).toBe(userdata[1].email)
+              done()
+            })
+            .catch(err => {
+              return done(err)
+            })
+        }
+      })
+  })
+  it('err with invalid email and pass', done => {
+    request(app)
+      .post('/users/login')
+      .send({
+        email: 'sohaibasdad@gmail.com',
+        password: 'alibhaiwow9'
+      })
+      .expect(400)
+      .end(done)
+  })
+})
+
+describe('logout users', () => {
+  it('delete the token by sedning it', done => {
+    request(app)
+      .delete('/users/me/token')
+      .set('x-token', userdata[0].tokens[0].token)
+      .expect(200)
+      .end((err, res) => {
+        if (err) {
+          return done(err)
+        }
+        User.findById(userdata[0]._id)
+          .then(user => {
+            expect(user.tokens.length).toBe(0)
+            done()
+          })
+          .catch(err => {
+            return done(err)
+          })
+      })
   })
 })

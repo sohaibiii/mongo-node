@@ -83,6 +83,38 @@ userShema.pre('save', function (next) {
   } else next()
 })
 
+userShema.statics.findByCredientials = function (email, password) {
+  // model method
+  var User = this
+  return User.findOne({ email }).then(user => {
+    if (!user) {
+      return Promise.reject()
+    } else {
+      return new Promise((resolve, reject) => {
+        bcrypt.compare(password, user.password, (err, res) => {
+          if (res) {
+            resolve(user)
+          } else {
+            reject()
+          }
+        })
+      })
+    }
+  })
+}
+
+userShema.methods.removeToken = function (token) {
+  var user = this
+  // $pull is a method used to delete something from an array
+
+  return user.update({
+    $pull: {
+      tokens: {
+        token: token
+      }
+    }
+  })
+}
 // findByToken is a model function
 // statics is just like methods object but used for model
 

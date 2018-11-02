@@ -125,7 +125,6 @@ app.post('/users', (req, res) => {
       // var user1 = _.pick(user, ['_id', 'email'])
 
       res.header('x-token', token).send(user)
-      console.log(user)
     })
     .catch(err => {
       res.status(400).send(err)
@@ -136,6 +135,34 @@ app.post('/users', (req, res) => {
 
 app.get('/users/me', Authenticatemiddleware, (req, res) => {
   res.send(req.user)
+})
+
+// login
+
+app.post('/users/login', (req, res) => {
+  var body = _.pick(req.body, ['email', 'password'])
+  User.findByCredientials(body.email, body.password)
+    .then(user => {
+      return user.generateAuthToken().then(token => {
+        res.header('x-token', token).send(user)
+      })
+    })
+    .catch(e => {
+      res.status(400).send(e)
+    })
+})
+
+// logout
+
+app.delete('/users/me/token', Authenticatemiddleware, (req, res) => {
+  req.user.removeToken(req.token).then(
+    () => {
+      res.status(200).send()
+    },
+    err => {
+      res.status(400).send(err)
+    }
+  )
 })
 
 app.listen(port, () => {
