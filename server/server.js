@@ -1,15 +1,4 @@
-var env = process.env.NODE_ENV || 'development'
-
-// by default process.env.NODE_ENV  'production' hta hai
-console.log('***** env is', env)
-
-if (env === 'development') {
-  process.env.PORT = 3000
-  process.env.MONGODB_URI = 'mongodb://localhost:27017/Todo-Mongo'
-} else if (env === 'test') {
-  process.env.PORT = 3000
-  process.env.MONGODB_URI = 'mongodb://localhost:27017/Todo-Mongo-test'
-}
+require('./config/config')
 
 const express = require('express')
 const bodyparser = require('body-parser')
@@ -24,9 +13,10 @@ const port = process.env.PORT
 
 const app = express()
 app.use(bodyparser.json())
-app.post('/todos', (req, res) => {
+app.post('/todos', Authenticatemiddleware, (req, res) => {
   var model = new Model({
-    text: req.body.text
+    text: req.body.text,
+    _creator: req.user._id
   })
   model.save().then(
     data => {
@@ -38,8 +28,10 @@ app.post('/todos', (req, res) => {
   )
 })
 
-app.get('/todos', (req, res) => {
-  Model.find().then(
+app.get('/todos', Authenticatemiddleware, (req, res) => {
+  Model.find({
+    _creator: req.user._id
+  }).then(
     todos => {
       res.send({ todos })
     },
@@ -49,15 +41,18 @@ app.get('/todos', (req, res) => {
   )
 })
 
-app.get('/todos/:id', (req, res) => {
+app.get('/todos/:id', Authenticatemiddleware, (req, res) => {
   const id = req.params.id
   if (!ObjectID.isValid(id)) {
-    res.status(400).send()
+    res.status(404).send()
   } else {
-    Model.findById(id)
+    Model.findOne({
+      _id: id,
+      _creator: req.user._id
+    })
       .then(todo => {
         if (!todo) {
-          res.status(400).send()
+          res.status(404).send()
         } else res.send({ todo })
       })
       .catch(err => {
@@ -66,12 +61,15 @@ app.get('/todos/:id', (req, res) => {
   }
 })
 
-app.delete('/todos/:id', (req, res) => {
+app.delete('/todos/:id', Authenticatemiddleware, (req, res) => {
   const idd = req.params.id
   if (!ObjectID.isValid(idd)) {
     res.status(400).send()
   } else {
-    Model.findByIdAndDelete(idd)
+    Model.findOneAndDelete({
+      _id: idd,
+      _creator: req.user._id
+    })
       .then(todo => {
         if (!todo) {
           res.status(400).send()
@@ -83,7 +81,7 @@ app.delete('/todos/:id', (req, res) => {
   }
 })
 
-app.patch('/todos/:id', (req, res) => {
+app.patch('/todos/:id', Authenticatemiddleware, (req, res) => {
   const id = req.params.id
   var body = _.pick(req.body, ['text', 'created'])
   if (_.isBoolean(body.created) && body.created) {
@@ -95,8 +93,11 @@ app.patch('/todos/:id', (req, res) => {
   if (!ObjectID.isValid(id)) {
     res.status(400).send()
   } else {
-    Model.findByIdAndUpdate(
-      id,
+    Model.findOneAndUpdate(
+      {
+        _id: id,
+        _creator: req.user._id
+      },
       {
         $set: body
       },

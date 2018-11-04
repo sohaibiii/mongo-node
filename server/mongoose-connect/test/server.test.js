@@ -17,6 +17,7 @@ describe('Todo-Post', function () {
 
     request(app)
       .post('/todos')
+      .set('x-token', userdata[0].tokens[0].token)
       .send({ text })
       .expect(200)
       .expect(res => {
@@ -40,19 +41,24 @@ describe('Todo-Post', function () {
   })
 
   it('should not be created with invallid object', done => {
-    request(app).post('/todos').send({}).expect(400).end((err, res) => {
-      if (err) {
-        return done(err)
-      }
-      Model.find()
-        .then(todos => {
-          expect(todos.length).toBe(2)
-          done()
-        })
-        .catch(err => {
+    request(app)
+      .post('/todos')
+      .set('x-token', userdata[0].tokens[0].token)
+      .send({})
+      .expect(400)
+      .end((err, res) => {
+        if (err) {
           return done(err)
-        })
-    })
+        }
+        Model.find()
+          .then(todos => {
+            expect(todos.length).toBe(2)
+            done()
+          })
+          .catch(err => {
+            return done(err)
+          })
+      })
   })
 })
 
@@ -60,17 +66,20 @@ describe('Todos of Get methods', () => {
   it('Get all objects', done => {
     request(app)
       .get('/todos')
+      .set('x-token', userdata[0].tokens[0].token)
       .expect(200)
       .expect(res => {
-        expect(res.body.todos.length).toBe(2)
+        expect(res.body.todos.length).toBe(1)
       })
       .end(done)
   })
   describe('Todos of get method by ids', () => {
     it('TODO by id', done => {
-      const ids = todos[1]._id.toHexString()
+      var ids = todos[1]._id.toHexString()
+
       request(app)
         .get(`/todos/${ids}`)
+        .set('x-token', userdata[1].tokens[0].token)
         .expect(200)
         .expect(res => {
           expect(res.body.todo._id).toBe(ids)
@@ -78,12 +87,28 @@ describe('Todos of Get methods', () => {
         })
         .end(done)
     })
+    it('TODO not by id if user changes', done => {
+      const ids = todos[0]._id.toHexString()
+      request(app)
+        .get(`/todos/${ids}`)
+        .set('x-token', userdata[1].tokens[0].token)
+        .expect(404)
+        .end(done)
+    })
     it('if id-todo not found', done => {
       const d = new ObjectID().toHexString()
-      request(app).get(`/todos/${d}`).expect(400).end(done)
+      request(app)
+        .get(`/todos/${d}`)
+        .set('x-token', userdata[1].tokens[0].token)
+        .expect(404)
+        .end(done)
     })
     it('invaid id', done => {
-      request(app).get('/todos/qwewe3243').expect(400).end(done)
+      request(app)
+        .get('/todos/qwewe3243')
+        .set('x-token', userdata[1].tokens[0].token)
+        .expect(404)
+        .end(done)
     })
   })
 })
@@ -93,6 +118,7 @@ describe('delete todos', () => {
     var id = todos[1]._id.toHexString()
     request(app)
       .delete(`/todos/${id}`)
+      .set('x-token', userdata[1].tokens[0].token)
       .expect(200)
       .expect(res => {
         expect(res.body.todo._id).toBe(id)
@@ -111,6 +137,26 @@ describe('delete todos', () => {
           })
       })
   })
+  it('delete not by ids if user changes', done => {
+    var id = todos[1]._id.toHexString()
+    request(app)
+      .delete(`/todos/${id}`)
+      .set('x-token', userdata[0].tokens[0].token)
+      .expect(400)
+      .end((err, res) => {
+        if (err) {
+          return done(err)
+        }
+        Model.findById(id)
+          .then(model => {
+            expect(model).toBeTruthy() // it is used instead of toNotExists()
+            done()
+          })
+          .catch(err => {
+            return done(err)
+          })
+      })
+  })
 })
 
 describe('updateing todos', () => {
@@ -120,6 +166,7 @@ describe('updateing todos', () => {
 
     request(app)
       .patch(`/todos/${id}`)
+      .set('x-token', userdata[0].tokens[0].token)
       .send({
         created: true,
         text
@@ -132,6 +179,20 @@ describe('updateing todos', () => {
       })
       .end(done)
   })
+  it('updating not throug id if creator changes', done => {
+    var id = todos[1]._id.toHexString()
+    var text = 'ap mjhe btao k kia ho raha hai'
+
+    request(app)
+      .patch(`/todos/${id}`)
+      .set('x-token', userdata[0].tokens[0].token)
+      .send({
+        created: true,
+        text
+      })
+      .expect(400)
+      .end(done)
+  })
 
   it(' false createdAt will be null', done => {
     const id2 = todos[1]._id.toHexString()
@@ -142,6 +203,7 @@ describe('updateing todos', () => {
       .send({
         text
       })
+      .set('x-token', userdata[1].tokens[0].token)
       .expect(200)
       .expect(res => {
         expect(res.body.todo.text).toBe(text)
@@ -245,7 +307,7 @@ describe('login testing', () => {
         } else {
           User.findById(userdata[1]._id)
             .then(user => {
-              expect(user.toObject().tokens[0]).toMatchObject({
+              expect(user.toObject().tokens[1]).toMatchObject({
                 access: 'auth',
                 token: res.headers['x-token']
               })

@@ -4,16 +4,6 @@ const jwb = require('jsonwebtoken')
 var { Model } = require('../../model')
 var { User } = require('../../user')
 
-var todos = [
-  {
-    _id: new ObjectID(),
-    text: ' what the fuck u want'
-  },
-  {
-    _id: new ObjectID(),
-    text: 'ni main ne ni jana yar'
-  }
-]
 var objectid1 = new ObjectID()
 var objectid2 = new ObjectID()
 
@@ -26,7 +16,7 @@ var userdata = [
       {
         access: 'auth',
         token: jwb
-          .sign({ _id: objectid1, access: 'auth' }, 'sohaibi')
+          .sign({ _id: objectid1, access: 'auth' }, process.env.JWT_SECRET)
           .toString()
       }
     ]
@@ -34,19 +24,35 @@ var userdata = [
   {
     _id: objectid2,
     email: 'mylove123@gmail.com',
-    password: 'alibhaiwow9'
+    password: 'alibhaiwow9',
+    tokens: [
+      {
+        access: 'auth',
+        token: jwb
+          .sign({ _id: objectid2, access: 'auth' }, process.env.JWT_SECRET)
+          .toString()
+      }
+    ]
   }
 ]
 
-const populateTodos = done => {
-  Model.deleteMany({})
-    .then(() => {
-      Model.insertMany(todos)
-    })
-    .then(() => {
-      done()
-    })
-}
+var id1 = new ObjectID()
+var id2 = new ObjectID()
+
+var todos = [
+  {
+    _id: id1,
+    text: ' what the fuck u want',
+    _creator: objectid1
+  },
+  {
+    _id: id2,
+    text: 'ni main ne ni jana yar',
+    created: true,
+    createdAt: 333,
+    _creator: objectid2
+  }
+]
 
 const populateUsers = function (done) {
   this.timeout(10000)
@@ -55,6 +61,18 @@ const populateUsers = function (done) {
       var user1 = new User(userdata[0]).save()
       var user2 = new User(userdata[1]).save()
       return Promise.all([user1, user2])
+    })
+    .then(() => {
+      done()
+    })
+}
+
+const populateTodos = function (done) {
+  this.timeout(10000)
+
+  Model.deleteMany({})
+    .then(() => {
+      Model.insertMany(todos)
     })
     .then(() => {
       done()

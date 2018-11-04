@@ -45,7 +45,7 @@ userShema.methods.generateAuthToken = function () {
   // builtd in instance method
   // this shows the instance means single user
   var access = 'auth'
-  var token = jwt.sign({ _id: this._id, access }, 'sohaibi')
+  var token = jwt.sign({ _id: this._id, access }, process.env.JWT_SECRET)
   this.tokens.push({ access, token })
   return this.save().then(() => {
     return token
@@ -56,7 +56,7 @@ userShema.statics.findByToken = function (token) {
   var User = this
   var decode
   try {
-    decode = jwt.verify(token, 'sohaibi')
+    decode = jwt.verify(token, process.env.JWT_SECRET)
   } catch (error) {
     // return new Promise((reject, resolve) => {
     //   reject()
@@ -107,7 +107,7 @@ userShema.methods.removeToken = function (token) {
   var user = this
   // $pull is a method used to delete something from an array
 
-  return user.update({
+  return user.updateOne({
     $pull: {
       tokens: {
         token: token
